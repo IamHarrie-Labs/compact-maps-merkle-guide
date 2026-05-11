@@ -15,8 +15,9 @@ export ledger memberTree: MerkleTree<20, Bytes<32>>;
 export ledger memberCount: Counter;
 
 // Sealed admin key — set at deployment, immutable afterward.
-// Attempting to write adminKey outside the constructor is a compile error.
-sealed export ledger adminKey: Bytes<32>;
+// NOTE: sealed fields use "sealed ledger", not "sealed export ledger".
+// The export modifier is not valid after sealed.
+sealed ledger adminKey: Bytes<32>;
 
 // Off-chain witness: returns the Merkle path for a given identity leaf
 witness getMemberPath(identity: Bytes<32>): MerkleTreePath<20, Bytes<32>>;
