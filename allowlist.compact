@@ -24,11 +24,13 @@ export circuit addToAllowlist(leaf: Bytes<32>): [] {
 
 // Prove that a leaf is in the allowlist without revealing which slot it occupies.
 // The membership path is provided by the off-chain witness and never stored on-chain.
+// disclose(computed) is required: checkRoot is a ledger operation and the compiler
+// requires explicit disclosure when a witness-derived value passes into a ledger call.
 export circuit verifyMembership(leaf: Bytes<32>): [] {
     const path = findLeaf(leaf);
     const computed = merkleTreePathRoot<20, Bytes<32>>(path);
     assert(
-        allowlist.checkRoot(computed),
+        allowlist.checkRoot(disclose(computed)),
         "Leaf is not in the allowlist"
     );
 }

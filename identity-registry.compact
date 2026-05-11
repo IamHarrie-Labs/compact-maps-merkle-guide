@@ -46,12 +46,14 @@ export circuit updateProfile(identity: Bytes<32>, newData: Bytes<32>): [] {
     profiles.insert(disclose(identity), disclose(newData));
 }
 
-// Prove membership without revealing which identity or correlating to a profile entry
+// Prove membership without revealing which identity or correlating to a profile entry.
+// disclose(computed) required: checkRoot is a ledger operation, so the compiler
+// needs explicit disclosure on any witness-derived value passed into it.
 export circuit proveMembership(identity: Bytes<32>): [] {
     const path = getMemberPath(identity);
     const computed = merkleTreePathRoot<20, Bytes<32>>(path);
     assert(
-        memberTree.checkRoot(computed),
+        memberTree.checkRoot(disclose(computed)),
         "Identity is not a registered member"
     );
 }
