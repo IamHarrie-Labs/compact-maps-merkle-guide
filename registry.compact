@@ -28,7 +28,9 @@ export circuit deregister(key: Bytes<32>): [] {
     registry.remove(disclose(key));
 }
 
-// Read-only membership check. Marked pure: no ledger writes, no witness calls.
-export pure circuit isRegistered(key: Bytes<32>): Boolean {
+// Read-only membership check.
+// NOTE: cannot be marked pure — pure circuits have zero ledger access.
+// Reads from the registry ledger field make this a regular (impure) circuit.
+export circuit isRegistered(key: Bytes<32>): Boolean {
     return registry.member(disclose(key));
 }

@@ -33,8 +33,9 @@ export circuit registerIdentity(identity: Bytes<32>, profileData: Bytes<32>): []
     memberCount.increment(1);
 }
 
-// Public profile read — anyone can query. Pure: no writes, no witnesses.
-export pure circuit getProfile(identity: Bytes<32>): Bytes<32> {
+// Public profile read — anyone can query.
+// Cannot be pure: reads from the profiles ledger field.
+export circuit getProfile(identity: Bytes<32>): Bytes<32> {
     assert(profiles.member(disclose(identity)), "Identity not found");
     return profiles.lookup(disclose(identity));
 }
