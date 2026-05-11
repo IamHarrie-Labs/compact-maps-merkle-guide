@@ -1,0 +1,50 @@
+name: Compile Compact Contracts
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Compact toolchain manager
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+          echo "$HOME/.compact/bin" >> $GITHUB_PATH
+
+      - name: Download latest compiler version
+        run: |
+          export PATH="$HOME/.compact/bin:$PATH"
+          compact update
+          compact --version
+          compact compile --version || true
+
+      - name: Compile registry.compact
+        run: |
+          mkdir -p out/registry
+          compact compile registry.compact out/registry
+          echo "✅ registry.compact compiled successfully"
+
+      - name: Compile allowlist.compact
+        run: |
+          mkdir -p out/allowlist
+          compact compile allowlist.compact out/allowlist
+          echo "✅ allowlist.compact compiled successfully"
+
+      - name: Compile identity-registry.compact
+        run: |
+          mkdir -p out/identity-registry
+          compact compile identity-registry.compact out/identity-registry
+          echo "✅ identity-registry.compact compiled successfully"
+
+      - name: Upload compilation output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-contracts
+          path: out/

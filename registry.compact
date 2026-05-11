@@ -1,0 +1,34 @@
+// registry.compact
+// Example 1: Map-based key-value registry
+// Demonstrates: Map<K,V> ledger type, member/insert/remove, Counter, pure circuit
+// Companion to: bounty-289 article (Working with Maps and Merkle Trees in Compact)
+
+pragma language_version >= 0.20;
+import CompactStandardLibrary;
+
+export ledger registry: Map<Bytes<32>, Bytes<32>>;
+export ledger entryCount: Counter;
+
+// Register a new key-value pair. Fails if the key already exists.
+export circuit register(key: Bytes<32>, value: Bytes<32>): [] {
+    assert(!registry.member(disclose(key)), "Key already registered");
+    registry.insert(disclose(key), disclose(value));
+    entryCount.increment(1);
+}
+
+// Overwrite the value for an existing key. Fails if the key is not registered.
+export circuit update(key: Bytes<32>, newValue: Bytes<32>): [] {
+    assert(registry.member(disclose(key)), "Key not registered");
+    registry.insert(disclose(key), disclose(newValue));
+}
+
+// Remove a key-value pair. Fails if the key is not registered.
+export circuit deregister(key: Bytes<32>): [] {
+    assert(registry.member(disclose(key)), "Key not registered");
+    registry.remove(disclose(key));
+}
+
+// Read-only membership check. Marked pure: no ledger writes, no witness calls.
+export pure circuit isRegistered(key: Bytes<32>): Boolean {
+    return registry.member(disclose(key));
+}

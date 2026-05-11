@@ -1,0 +1,56 @@
+// identity-registry.compact
+// Hybrid pattern: Map + MerkleTree + sealed admin key
+// Demonstrates: combining Map (readable profiles) with MerkleTree (ZK membership),
+//               sealed ledger field, constructor, pure circuit, Counter
+// Companion to: bounty-289 article (Working with Maps and Merkle Trees in Compact)
+
+pragma language_version >= 0.20;
+import CompactStandardLibrary;
+
+// Map: full profile data — readable by anyone on-chain
+export ledger profiles: Map<Bytes<32>, Bytes<32>>;
+
+// MerkleTree: membership set — prove you're registered without revealing your key
+export ledger memberTree: MerkleTree<20, Bytes<32>>;
+export ledger memberCount: Counter;
+
+// Sealed admin key — set at deployment, immutable afterward.
+// Attempting to write adminKey outside the constructor is a compile error.
+sealed export ledger adminKey: Bytes<32>;
+
+// Off-chain witness: returns the Merkle path for a given identity leaf
+witness getMemberPath(identity: Bytes<32>): MerkleTreePath<20, Bytes<32>>;
+
+constructor(admin: Bytes<32>) {
+    adminKey = disclose(admin);
+}
+
+// Register: insert profile into Map AND add identity leaf to MerkleTree
+export circuit registerIdentity(identity: Bytes<32>, profileData: Bytes<32>): [] {
+    assert(!profiles.member(disclose(identity)), "Identity already registered");
+    profiles.insert(disclose(identity), disclose(profileData));
+    memberTree.insert(disclose(identity));
+    memberCount.increment(1);
+}
+
+// Public profile read — anyone can query. Pure: no writes, no witnesses.
+export pure circuit getProfile(identity: Bytes<32>): Bytes<32> {
+    assert(profiles.member(disclose(identity)), "Identity not found");
+    return profiles.lookup(disclose(identity));
+}
+
+// Update profile data — any caller who knows the identity key can update
+export circuit updateProfile(identity: Bytes<32>, newData: Bytes<32>): [] {
+    assert(profiles.member(disclose(identity)), "Identity not found");
+    profiles.insert(disclose(identity), disclose(newData));
+}
+
+// Prove membership without revealing which identity or correlating to a profile entry
+export circuit proveMembership(identity: Bytes<32>): [] {
+    const path = getMemberPath(identity);
+    const computed = merkleTreePathRoot<20, Bytes<32>>(path);
+    assert(
+        memberTree.checkRoot(computed),
+        "Identity is not a registered member"
+    );
+}

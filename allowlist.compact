@@ -1,0 +1,34 @@
+// allowlist.compact
+// Example 2: Merkle-tree allowlist with depth-20 path verification
+// Demonstrates: MerkleTree<n,T>, merkleTreePathRoot, checkRoot, MerkleTreePath witness
+// Companion to: bounty-289 article (Working with Maps and Merkle Trees in Compact)
+//
+// The on-chain state is only the Merkle root.
+// Leaf data lives off-chain; membership is proved via a path witness.
+
+pragma language_version >= 0.20;
+import CompactStandardLibrary;
+
+export ledger allowlist: MerkleTree<20, Bytes<32>>;
+export ledger leafCount: Counter;
+
+// Off-chain witness: given a leaf, return its Merkle membership path.
+// Implemented in TypeScript; called during proof generation only.
+witness findLeaf(leaf: Bytes<32>): MerkleTreePath<20, Bytes<32>>;
+
+// Add a leaf to the allowlist. The root is updated on-chain automatically.
+export circuit addToAllowlist(leaf: Bytes<32>): [] {
+    allowlist.insert(disclose(leaf));
+    leafCount.increment(1);
+}
+
+// Prove that a leaf is in the allowlist without revealing which slot it occupies.
+// The membership path is provided by the off-chain witness and never stored on-chain.
+export circuit verifyMembership(leaf: Bytes<32>): [] {
+    const path = findLeaf(leaf);
+    const computed = merkleTreePathRoot<20, Bytes<32>>(path);
+    assert(
+        allowlist.checkRoot(computed),
+        "Leaf is not in the allowlist"
+    );
+}
