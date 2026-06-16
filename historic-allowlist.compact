@@ -1,0 +1,37 @@
+// historic-allowlist.compact
+// HistoricMerkleTree allowlist with concurrent-insert resilience
+// Demonstrates: HistoricMerkleTree<n,T>, checkRoot against historic roots,
+//               MerkleTreePath witness
+// Companion to: bounty-289 article (Working with Maps and Merkle Trees in Compact)
+//
+// HistoricMerkleTree keeps a history of past roots. checkRoot here matches
+// any root the tree has ever held — not just the current one. This is the
+// contrast with plain MerkleTree, where checkRoot only matches the latest
+// root, so a witness becomes invalid the moment another insert lands.
+
+pragma language_version >= 0.20;
+import CompactStandardLibrary;
+
+export ledger members: HistoricMerkleTree<20, Bytes<32>>;
+export ledger memberCount: Counter;
+
+// Off-chain witness: given a leaf, returns its Merkle path.
+witness getMemberPath(): MerkleTreePath<20, Bytes<32>>;
+
+// Add a leaf to the allowlist. The root advances; previous roots stay valid.
+export circuit addMember(leaf: Bytes<32>): [] {
+    members.insert(disclose(leaf));
+    memberCount.increment(1);
+}
+
+// Prove membership against any historic root.
+// On HistoricMerkleTree, checkRoot returns true for the current root or
+// any previous root — that's what makes this resilient under concurrent load.
+export circuit proveHistoricMembership(): [] {
+    const path = getMemberPath();
+    const computed = merkleTreePathRoot<20, Bytes<32>>(path);
+    assert(
+        members.checkRoot(disclose(computed)),
+        "Leaf is not a historic member"
+    );
+}
